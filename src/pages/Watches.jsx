@@ -1,106 +1,34 @@
-import { useState } from "react";
-import { watches } from "../data/products";
+import ProductCard from "../components/ProductCard";
+
+const PRODUCTS = [
+  // ✅ Paste your existing watches list here:
+  // { id, name, price, image }
+];
 
 export default function Watches({ addToCart }) {
-  const [openImage, setOpenImage] = useState(null);
-
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <h1 className="text-4xl font-bold mb-4">Watches</h1>
-        <p className="text-gray-600 max-w-2xl mb-10">
-          Timeless wristwatches with engraving options — made to feel personal
-          and premium.
+    <div className="max-w-7xl mx-auto px-6 py-14">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Watches</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+          Engraved wristwatches and premium styles (Casio & Rolex).
         </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-          {watches.map((item) => (
-            <div
-              key={item.id}
-              className="border rounded-xl overflow-hidden hover:shadow-lg transition bg-white"
-            >
-              <button
-                type="button"
-                onClick={() => setOpenImage(item)}
-                className="block w-full"
-                aria-label={`View ${item.name}`}
-              >
-                <div className="h-72 bg-gray-100 overflow-hidden">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover hover:scale-[1.02] transition"
-                    loading="lazy"
-                  />
-                </div>
-              </button>
-
-              <div className="p-5">
-                <h2 className="font-semibold text-lg">{item.name}</h2>
-
-                <p className="mt-3 font-bold">
-                  ₦{Number(item.price).toLocaleString()}
-                </p>
-
-                <button
-                  onClick={() => addToCart(item)}
-                  className="mt-5 w-full bg-black text-white py-2 rounded-lg hover:opacity-90 transition"
-                >
-                  Add to Cart
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
-      {/* IMAGE MODAL */}
-      {openImage ? (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
-          onClick={() => setOpenImage(null)}
-        >
-          <div
-            className="bg-white rounded-2xl max-w-3xl w-full overflow-hidden shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-5 py-4 border-b">
-              <div>
-                <p className="font-semibold">{openImage.name}</p>
-              </div>
-              <button
-                onClick={() => setOpenImage(null)}
-                className="px-3 py-1 rounded-lg border hover:bg-gray-50"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="bg-black">
-              <img
-                src={openImage.image}
-                alt={openImage.name}
-                className="w-full max-h-[75vh] object-contain"
-              />
-            </div>
-
-            <div className="p-5">
-              <p className="font-bold text-lg">
-                ₦{Number(openImage.price).toLocaleString()}
-              </p>
-              <button
-                onClick={() => {
-                  addToCart(openImage);
-                  setOpenImage(null);
-                }}
-                className="mt-4 w-full bg-black text-white py-2 rounded-lg hover:opacity-90 transition"
-              >
-                Add to Cart
-              </button>
-            </div>
-          </div>
+      {PRODUCTS.length === 0 ? (
+        <div className="border border-black/10 dark:border-white/10 rounded-2xl p-8 bg-white/60 dark:bg-white/5">
+          <p className="text-gray-600 dark:text-gray-400">
+            Add your watch products into the PRODUCTS array in{" "}
+            <span className="font-semibold">src/pages/Watches.jsx</span>.
+          </p>
         </div>
-      ) : null}
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          {PRODUCTS.map((p) => (
+            <ProductCard key={p.id} product={p} onAdd={addToCart} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
