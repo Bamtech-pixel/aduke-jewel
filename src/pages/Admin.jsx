@@ -1,202 +1,158 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { auth, db } from "../firebase";
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
 import {
   collection,
-  onSnapshot,
-  updateDoc,
+  getDocs,
   doc,
-  query,
-  orderBy,
+  updateDoc,
 } from "firebase/firestore";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { db, auth } from "../firebase";
-
-const STATUS_OPTIONS = [
-  "Pending",
-  "Paid (Confirm)",
-  "Ready",
-  "Out for Delivery",
-  "Completed",
-  "Cancelled",
-];
 
 const ADMIN_EMAIL = "oluwaseunabidemi57@gmail.com";
 const ADMIN_PIN = "2505";
 
 export default function Admin() {
   const [user, setUser] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
-
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [pin, setPin] = useState("");
-  const [pinOk, setPinOk] = useState(false);
-
+  const [pinVerified, setPinVerified] = useState(false);
   const [orders, setOrders] = useState([]);
-  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
 
-  // Watch auth
+  // 🔐 Listen for auth state
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u || null);
-      setAuthReady(true);
-      setPinOk(false);
-      setPin("");
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
     });
     return () => unsub();
   }, []);
 
-  const isAdminEmail = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  // 📦 Fetch orders
+  const fetchOrders = async () => {
+    const snapshot = await getDocs(collection(db, "orders"));
+    const data = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setOrders(data);
+  };
 
-  // Live orders (only after admin verified)
   useEffect(() => {
-    if (!authReady) return;
-    if (!user || !isAdminEmail || !pinOk) return;
+    if (user && pinVerified) {
+      fetchOrders();
+    }
+  }, [user, pinVerified]);
 
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      },
-      (err) => {
-        console.error(err);
-        alert("Firestore error. Check console.");
-      }
-    );
+  // 🔑 Login
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      setError("Invalid login details");
+    }
+  };
 
-    return () => unsub();
-  }, [authReady, user, isAdminEmail, pinOk]);
+  // 🔐 PIN check
+  const verifyPin = () => {
+    if (pin === ADMIN_PIN) {
+      setPinVerified(true);
+    } else {
+      setError("Incorrect admin PIN");
+    }
+  };
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return orders;
+  // 🔄 Update order status
+  const updateStatus = async (orderId, status) => {
+    const ref = doc(db, "orders", orderId);
+    await updateDoc(ref, { status });
+    fetchOrders();
+  };
 
-    return orders.filter((o) => {
-      const id = (o.id || "").toLowerCase();
-      const status = (o.status || "").toLowerCase();
-      const itemsText = (o.items || [])
-        .map((it) => `${it.name || ""} ${it.size || ""}`.toLowerCase())
-        .join(" ");
-      return id.includes(q) || status.includes(q) || itemsText.includes(q);
-    });
-  }, [orders, search]);
-
+  // 🚪 Logout
   const logout = async () => {
     await signOut(auth);
+    setPinVerified(false);
+    setPin("");
   };
 
-  const verifyPin = () => {
-    if (pin === ADMIN_PIN) setPinOk(true);
-    else alert("Wrong admin PIN.");
-  };
-
-  const updateStatus = async (id, newStatus) => {
-    try {
-      await updateDoc(doc(db, "orders", id), { status: newStatus });
-    } catch (e) {
-      console.error(e);
-      alert("Failed to update status.");
-    }
-  };
-
-  const copyOrder = async (o) => {
-    const lines = [];
-    lines.push(`Aduke_Jewels — Order`);
-    lines.push(`Order ID: ${o.id}`);
-    lines.push(`Status: ${o.status || "Pending"}`);
-    lines.push("");
-
-    lines.push("Items:");
-    (o.items || []).forEach((it, i) => {
-      const size = it.size ? ` (${it.size})` : "";
-      const price = Number(it.price || 0);
-      lines.push(`${i + 1}. ${it.name}${size} — ₦${price.toLocaleString()}`);
-    });
-
-    lines.push("");
-    lines.push(`Total: ₦${Number(o.total || 0).toLocaleString()}`);
-
-    try {
-      await navigator.clipboard.writeText(lines.join("\n"));
-      alert("Copied ✅ Paste into WhatsApp.");
-    } catch {
-      alert("Copy failed (browser blocked clipboard).");
-    }
-  };
-
-  // ---------- UI STATES ----------
-  if (!authReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading…
-      </div>
-    );
-  }
-
+  // ❌ Not logged in
   if (!user) {
     return (
-      <div className="min-h-screen bg-white text-gray-900">
-        <div className="max-w-lg mx-auto px-6 py-20">
-          <h1 className="text-3xl font-bold mb-3">Admin</h1>
-          <p className="text-gray-600">
-            Please log in first. Then come back to <b>/admin</b>.
-          </p>
-          <p className="text-sm text-gray-500 mt-3">
-            Only <b>{ADMIN_EMAIL}</b> can access Admin.
-          </p>
-        </div>
-      </div>
-    );
-  }
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <form
+          onSubmit={handleLogin}
+          className="bg-white p-8 rounded shadow w-full max-w-sm"
+        >
+          <h2 className="text-2xl font-bold mb-6 text-center">
+            Admin Login
+          </h2>
 
-  if (!isAdminEmail) {
-    return (
-      <div className="min-h-screen bg-white text-gray-900">
-        <div className="max-w-lg mx-auto px-6 py-20">
-          <h1 className="text-3xl font-bold mb-3">Access denied</h1>
-          <p className="text-gray-600">
-            You are logged in as <b>{user.email}</b> but Admin requires:
-          </p>
-          <p className="mt-2">
-            ✅ <b>{ADMIN_EMAIL}</b>
-          </p>
-
-          <button
-            onClick={logout}
-            className="mt-6 px-4 py-2 border rounded-lg hover:bg-gray-50"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!pinOk) {
-    return (
-      <div className="min-h-screen bg-white text-gray-900">
-        <div className="max-w-md mx-auto px-6 py-20">
-          <h1 className="text-3xl font-bold mb-2">Admin Verification</h1>
-          <p className="text-sm text-gray-500 mb-6">
-            Logged in as <b>{user.email}</b>. Enter Admin PIN.
-          </p>
+          {error && (
+            <p className="text-red-500 text-sm mb-4">{error}</p>
+          )}
 
           <input
+            type="email"
+            placeholder="Admin email"
+            className="w-full border p-2 mb-4 rounded"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            className="w-full border p-2 mb-4 rounded"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button className="w-full bg-black text-white py-2 rounded">
+            Login
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  // 🔐 PIN screen
+  if (!pinVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="bg-white p-8 rounded shadow w-full max-w-sm">
+          <h2 className="text-xl font-bold mb-4 text-center">
+            Enter Admin PIN
+          </h2>
+
+          {error && (
+            <p className="text-red-500 text-sm mb-4">{error}</p>
+          )}
+
+          <input
+            type="password"
+            placeholder="Admin PIN"
+            className="w-full border p-2 mb-4 rounded"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
-            className="w-full border rounded-lg p-3 mb-4"
-            placeholder="Admin PIN"
-            type="password"
           />
 
           <button
             onClick={verifyPin}
-            className="w-full bg-black text-white py-3 rounded-lg hover:opacity-90"
+            className="w-full bg-black text-white py-2 rounded"
           >
-            Verify
+            Verify PIN
           </button>
 
           <button
             onClick={logout}
-            className="w-full mt-3 border py-3 rounded-lg hover:bg-gray-50"
+            className="w-full mt-4 text-sm text-gray-500"
           >
             Logout
           </button>
@@ -205,128 +161,58 @@ export default function Admin() {
     );
   }
 
-  // ---------- DASHBOARD ----------
+  // ✅ ADMIN DASHBOARD
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      <div className="max-w-7xl mx-auto px-6 py-14">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
-          <div>
-            <h1 className="text-3xl font-bold">Admin Orders</h1>
-            <p className="text-sm text-gray-500">
-              Logged in as <b>{user.email}</b> · Total: <b>{orders.length}</b> ·
-              Showing: <b>{filtered.length}</b>
-            </p>
-          </div>
-
-          <div className="flex gap-2 w-full md:w-auto">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="border rounded-lg p-3 w-full md:w-[360px]"
-              placeholder="Search by order id / status / item name..."
-            />
-            <button
-              onClick={logout}
-              className="border rounded-lg px-4 py-3 hover:bg-gray-50"
-              title="Logout"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-
-        {filtered.length === 0 ? (
-          <div className="border rounded-xl p-6 text-gray-600">
-            No orders yet. Make a test order from the cart to confirm.
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {filtered.map((o) => (
-              <div key={o.id} className="border rounded-2xl p-6">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-                  <div className="min-w-[260px]">
-                    <p className="text-sm text-gray-500">Order ID</p>
-                    <p className="text-xl font-bold break-all">{o.id}</p>
-
-                    <p className="mt-3 text-sm text-gray-500">Status</p>
-                    <p className="font-semibold">{o.status || "Pending"}</p>
-
-                    <p className="mt-3 text-sm text-gray-500">Total</p>
-                    <p className="text-2xl font-bold">
-                      ₦{Number(o.total || 0).toLocaleString()}
-                    </p>
-
-                    <button
-                      onClick={() => copyOrder(o)}
-                      className="mt-4 px-4 py-2 border rounded-lg hover:bg-gray-50"
-                    >
-                      Copy Order
-                    </button>
-                  </div>
-
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold mb-3">Items</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {(o.items || []).map((it, idx) => (
-                        <div
-                          key={idx}
-                          className="border rounded-xl p-3 flex gap-3 items-center"
-                        >
-                          {it.image ? (
-                            <img
-                              src={it.image}
-                              alt={it.name}
-                              className="w-14 h-14 rounded-lg object-cover"
-                            />
-                          ) : (
-                            <div className="w-14 h-14 rounded-lg bg-gray-100" />
-                          )}
-
-                          <div className="flex-1">
-                            <p className="font-medium">{it.name}</p>
-                            {it.size ? (
-                              <p className="text-xs text-gray-500">{it.size}</p>
-                            ) : null}
-                          </div>
-
-                          <p className="font-semibold">
-                            ₦{Number(it.price || 0).toLocaleString()}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-5">
-                      <p className="text-sm font-semibold mb-2">Change Status</p>
-                      <select
-                        value={o.status || "Pending"}
-                        onChange={(e) => updateStatus(o.id, e.target.value)}
-                        className="w-full border rounded-lg p-3 bg-white"
-                      >
-                        {STATUS_OPTIONS.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-
-                      <p className="text-xs text-gray-500 mt-2">
-                        Tip: Set <b>Paid (Confirm)</b> after payment, then{" "}
-                        <b>Ready</b> after engraving, then <b>Completed</b>.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <p className="text-xs text-gray-500 mt-12">
-          Admin is secured by Firebase Auth (email allowlist) + PIN. Next: Firestore
-          rules to block non-admin access.
-        </p>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+        <button
+          onClick={logout}
+          className="text-sm text-red-600"
+        >
+          Logout
+        </button>
       </div>
+
+      {orders.length === 0 ? (
+        <p>No orders yet.</p>
+      ) : (
+        <div className="space-y-4">
+          {orders.map((order) => (
+            <div
+              key={order.id}
+              className="bg-white p-4 rounded shadow"
+            >
+              <p className="font-semibold">
+                Order ID: {order.id}
+              </p>
+              <p>Email: {order.email}</p>
+              <p>Total: ₦{order.total}</p>
+              <p>Status: {order.status}</p>
+
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() =>
+                    updateStatus(order.id, "Processing")
+                  }
+                  className="px-3 py-1 bg-yellow-500 text-white rounded text-sm"
+                >
+                  Processing
+                </button>
+
+                <button
+                  onClick={() =>
+                    updateStatus(order.id, "Completed")
+                  }
+                  className="px-3 py-1 bg-green-600 text-white rounded text-sm"
+                >
+                  Completed
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

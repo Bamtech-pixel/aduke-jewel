@@ -10,6 +10,11 @@ import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 
+// ✅ NEW PAGES
+import Checkout from "./pages/Checkout";
+import OrderSuccess from "./pages/OrderSuccess";
+import TrackOrder from "./pages/TrackOrder";
+
 const CART_KEY = "aduke_cart_v1";
 const CURRENT_USER_KEY = "aduke_current_user_v1";
 
@@ -39,6 +44,7 @@ export default function App() {
   }, [cart]);
 
   const addToCart = (product) => setCart((prev) => [...prev, product]);
+  const clearCart = () => setCart([]);
   const cartCount = useMemo(() => cart.length, [cart]);
 
   return (
@@ -49,11 +55,22 @@ export default function App() {
     >
       <Routes>
         <Route path="/" element={<Home />} />
+
         <Route path="/bracelets" element={<Bracelets addToCart={addToCart} />} />
         <Route path="/necklaces" element={<Necklaces addToCart={addToCart} />} />
         <Route path="/watches" element={<Watches addToCart={addToCart} />} />
         <Route path="/sets" element={<Sets addToCart={addToCart} />} />
+
         <Route path="/cart" element={<Cart cart={cart} setCart={setCart} />} />
+
+        {/* ✅ NEW ROUTES */}
+        <Route
+          path="/checkout"
+          element={<Checkout cartItems={cart} clearCart={clearCart} />}
+        />
+        <Route path="/order-success" element={<OrderSuccess />} />
+        <Route path="/track" element={<TrackOrder />} />
+
         <Route path="/login" element={<Auth onLogin={(u) => setCurrentUser(u)} />} />
         <Route path="/profile" element={<Profile onLogout={() => setCurrentUser(null)} />} />
         <Route path="/admin" element={<Admin />} />
@@ -146,6 +163,14 @@ function Home() {
           className="px-10 py-3 bg-black text-white rounded hover:opacity-90"
         >
           Shop Now
+        </Link>
+
+        {/* Optional quick access */}
+        <Link
+          to="/track"
+          className="px-10 py-3 border rounded hover:bg-gray-50"
+        >
+          Track Order
         </Link>
       </div>
     </section>
