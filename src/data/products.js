@@ -24,8 +24,10 @@ export const bracelets = [
     name: "Engraved Gold Bracelet",
     size: "Standard",
     price: 13000,
+    // ✅ This is your “standard” bracelet image (you renamed earlier)
     image: "/images/Engraved Gold Bracelet-Engraved Gold Bracelet.jpg",
   },
+
   {
     id: "b-silver-12",
     category: "bracelets",
@@ -42,6 +44,7 @@ export const bracelets = [
     price: 16000,
     image: "/images/engraved-silver-bracelet-15mm.jpg",
   },
+
   {
     id: "b-black-12",
     category: "bracelets",
@@ -114,6 +117,10 @@ export const bracelets = [
     image: "/images/engraved-black-bracelet-15mm.jpg",
     note: "Barcode option available",
   },
+
+  // Optional “plain” bracelet photos you renamed (only if you want them later)
+  // { id: "b-gold-photo", category: "bracelets", name: "Gold Bracelet (Photo)", price: 15000, image: "/images/gold-bracelet.jpg" },
+  // { id: "b-silver-photo", category: "bracelets", name: "Silver Bracelet (Photo)", price: 15000, image: "/images/silver-bracelet.jpg" },
 ];
 
 export const necklaces = [
@@ -174,7 +181,8 @@ export const watches = [
     category: "watches",
     name: "Engraved Gold Casio Wristwatch",
     price: 18000,
-    image: "/images/Gold Casio Wristwatch &.jpg",
+    // ✅ renamed from "Gold Casio Wristwatch &.jpg"
+    image: "/images/gold-casio-wristwatch.jpg",
   },
   {
     id: "w-black-casio",
@@ -205,14 +213,16 @@ export const sets = [
     category: "sets",
     name: "Engraved Black Set",
     price: 32000,
-    image: "/images/Black Casio Wristwatch + Bracelet &.jpg",
+    // ✅ renamed from "Black Casio Wristwatch + Bracelet &.jpg"
+    image: "/images/black-casio-watch-bracelet.jpg",
   },
   {
     id: "s-gold-wrist",
     category: "sets",
     name: "Engraved Gold Wrist Set",
     price: 32000,
-    image: "/images/Gold Rolex Wristwatch + Bracelet &.jpg",
+    // ✅ renamed from "Gold Rolex Wristwatch + Bracelet &.jpg"
+    image: "/images/gold-rolex-watch-bracelet.jpg",
   },
   {
     id: "s-gold-female",
@@ -221,6 +231,9 @@ export const sets = [
     price: 21000,
     image: "/images/Engraved Gold Picture Necklace.jpg",
   },
+
+  // Optional extra set image you renamed (if you want to use it later)
+  // { id: "s-engraved-gold-rolex-set", category: "sets", name: "Engraved Gold Rolex Watch + Bracelet", price: 32000, image: "/images/engraved-gold-rolex-watch-bracelet.jpg" },
 ];
 
 // ✅ Combined list (useful for search/admin/cart later)
