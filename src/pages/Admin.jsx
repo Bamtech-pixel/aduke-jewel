@@ -15,16 +15,27 @@ import {
 const ADMIN_EMAIL = "oluwaseunabidemi57@gmail.com";
 const ADMIN_PIN = "2505";
 
+const STATUSES = [
+  "Pending",            // awaiting payment proof
+  "Confirmed",          // payment confirmed
+  "Processing",         // engraving/customization ongoing
+  "Ready for Pickup",   // for pickup orders
+  "Out for Delivery",   // for delivery orders
+  "Delivered",          // delivered
+  "Completed",          // closed/finished
+];
+
 export default function Admin() {
   const [user, setUser] = useState(null);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState("");
   const [pin, setPin] = useState("");
   const [pinVerified, setPinVerified] = useState(false);
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState("");
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
-  // 🔐 Listen for auth state
+  // 🔐 auth listener
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -32,47 +43,81 @@ export default function Admin() {
     return () => unsub();
   }, []);
 
-  // 📦 Fetch orders
+  // ✅ Fetch orders
   const fetchOrders = async () => {
-    const snapshot = await getDocs(collection(db, "orders"));
-    const data = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setOrders(data);
+    setLoadingOrders(true);
+    try {
+      const snapshot = await getDocs(collection(db, "orders"));
+      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      // newest first if createdAt exists
+      data.sort((a, b) => {
+        const ta = a.createdAt?.seconds || 0;
+        const tb = b.createdAt?.seconds || 0;
+        return tb - ta;
+      });
+
+      setOrders(data);
+    } catch (e) {
+      console.error(e);
+      setError("Failed to load orders.");
+    } finally {
+      setLoadingOrders(false);
+    }
   };
 
   useEffect(() => {
-    if (user && pinVerified) {
-      fetchOrders();
-    }
+    if (user && pinVerified) fetchOrders();
   }, [user, pinVerified]);
 
   // 🔑 Login
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // extra guard (optional)
+      if (email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+        setError("Only the admin email can login here.");
+        return;
+      }
+
+      await signInWithEmailAndPassword(auth, email.trim(), password);
     } catch (err) {
-      setError("Invalid login details");
+      console.error(err);
+      setError("Invalid login details.");
     }
   };
 
-  // 🔐 PIN check
+  // 🔐 PIN verify
   const verifyPin = () => {
-    if (pin === ADMIN_PIN) {
-      setPinVerified(true);
-    } else {
-      setError("Incorrect admin PIN");
-    }
+    setError("");
+    if (pin === ADMIN_PIN) setPinVerified(true);
+    else setError("Incorrect admin PIN.");
   };
 
-  // 🔄 Update order status
-  const updateStatus = async (orderId, status) => {
-    const ref = doc(db, "orders", orderId);
-    await updateDoc(ref, { status });
-    fetchOrders();
+  // 🔄 Update status in BOTH orders + orderPublic
+  const updateStatus = async (orderId, nextStatus, deliveryType) => {
+    setError("");
+    try {
+      // Update private order doc
+      await updateDoc(doc(db, "orders", orderId), {
+        status: nextStatus,
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Update public tracking doc
+      await updateDoc(doc(db, "orderPublic", orderId), {
+        status: nextStatus,
+        deliveryType: deliveryType || "",
+        updatedAt: new Date().toISOString(),
+      });
+
+      await fetchOrders();
+    } catch (e) {
+      console.error(e);
+      setError("Failed to update order status. Check Firestore rules.");
+    }
   };
 
   // 🚪 Logout
@@ -82,137 +127,14 @@ export default function Admin() {
     setPin("");
   };
 
-  // ❌ Not logged in
+  // -------- UI STATES --------
+
+  // Not logged in
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-6">
         <form
           onSubmit={handleLogin}
-          className="bg-white p-8 rounded shadow w-full max-w-sm"
+          className="bg-white p-8 rounded-2xl shadow w-full max-w-sm"
         >
-          <h2 className="text-2xl font-bold mb-6 text-center">
-            Admin Login
-          </h2>
-
-          {error && (
-            <p className="text-red-500 text-sm mb-4">{error}</p>
-          )}
-
-          <input
-            type="email"
-            placeholder="Admin email"
-            className="w-full border p-2 mb-4 rounded"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full border p-2 mb-4 rounded"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          <button className="w-full bg-black text-white py-2 rounded">
-            Login
-          </button>
-        </form>
-      </div>
-    );
-  }
-
-  // 🔐 PIN screen
-  if (!pinVerified) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded shadow w-full max-w-sm">
-          <h2 className="text-xl font-bold mb-4 text-center">
-            Enter Admin PIN
-          </h2>
-
-          {error && (
-            <p className="text-red-500 text-sm mb-4">{error}</p>
-          )}
-
-          <input
-            type="password"
-            placeholder="Admin PIN"
-            className="w-full border p-2 mb-4 rounded"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-          />
-
-          <button
-            onClick={verifyPin}
-            className="w-full bg-black text-white py-2 rounded"
-          >
-            Verify PIN
-          </button>
-
-          <button
-            onClick={logout}
-            className="w-full mt-4 text-sm text-gray-500"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ✅ ADMIN DASHBOARD
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        <button
-          onClick={logout}
-          className="text-sm text-red-600"
-        >
-          Logout
-        </button>
-      </div>
-
-      {orders.length === 0 ? (
-        <p>No orders yet.</p>
-      ) : (
-        <div className="space-y-4">
-          {orders.map((order) => (
-            <div
-              key={order.id}
-              className="bg-white p-4 rounded shadow"
-            >
-              <p className="font-semibold">
-                Order ID: {order.id}
-              </p>
-              <p>Email: {order.email}</p>
-              <p>Total: ₦{order.total}</p>
-              <p>Status: {order.status}</p>
-
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={() =>
-                    updateStatus(order.id, "Processing")
-                  }
-                  className="px-3 py-1 bg-yellow-500 text-white rounded text-sm"
-                >
-                  Processing
-                </button>
-
-                <button
-                  onClick={() =>
-                    updateStatus(order.id, "Completed")
-                  }
-                  className="px-3 py-1 bg-green-600 text-white rounded text-sm"
-                >
-                  Completed
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+          <h
