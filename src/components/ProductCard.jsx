@@ -35,7 +35,14 @@ export default function ProductCard({ product, onAdd }) {
 
         {/* Content */}
         <div className="p-5">
-          <p className="text-sm font-semibold leading-snug">{product.name}</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-semibold leading-snug">{product.name}</p>
+            {product.size ? (
+              <span className="text-[11px] px-2 py-1 rounded-full border border-black/10 dark:border-white/10 text-gray-600 dark:text-gray-400">
+                {product.size}
+              </span>
+            ) : null}
+          </div>
 
           <div className="mt-3 flex items-center justify-between gap-3">
             <p className="text-lg font-bold">
@@ -44,7 +51,7 @@ export default function ProductCard({ product, onAdd }) {
 
             <button
               onClick={() => onAdd?.(product)}
-              className="px-4 py-2 rounded-lg border border-champagne-500 text-champagne-800 dark:text-champagne-200 hover:bg-champagne-500 hover:text-white transition text-sm font-semibold"
+              className="px-4 py-2 rounded-lg border border-[#d6b37c] text-[#8b6b2e] dark:text-[#f2e3c6] hover:bg-[#d6b37c] hover:text-white transition text-sm font-semibold"
             >
               Add to Cart
             </button>
@@ -69,7 +76,9 @@ export default function ProductCard({ product, onAdd }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 dark:border-white/10">
-              <p className="text-sm font-semibold">{product.name}</p>
+              <p className="text-sm font-semibold">
+                {product.name} {product.size ? `(${product.size})` : ""}
+              </p>
               <button
                 className="text-sm px-3 py-1 rounded-lg border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10"
                 onClick={() => setOpen(false)}
