@@ -15,6 +15,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -27,23 +28,43 @@ export default function Profile() {
   useEffect(() => {
     if (!user?.uid) return;
 
+    // NOTE:
+    // This requires each order doc to have:
+    // createdAt: serverTimestamp() (Firestore Timestamp)
+    // If you don't have createdAt on old orders, those might not show.
     const q = query(
       collection(db, "orders"),
       where("userId", "==", user.uid),
       orderBy("createdAt", "desc")
     );
 
-    const unsub = onSnapshot(q, (snap) => {
-      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setOrders(rows);
-    });
+    setLoadingOrders(true);
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setOrders(rows);
+        setLoadingOrders(false);
+      },
+      () => {
+        // If index/rules cause an error, avoid freezing the UI
+        setOrders([]);
+        setLoadingOrders(false);
+      }
+    );
 
     return () => unsub();
   }, [user]);
 
   const logout = async () => {
-    await signOut(auth);
-    navigate("/");
+    try {
+      await signOut(auth);
+    } catch {
+      // ignore
+    } finally {
+      navigate("/");
+    }
   };
 
   const displayName = useMemo(() => {
@@ -58,13 +79,15 @@ export default function Profile() {
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
         <div>
           <h2 className="text-3xl font-semibold">Profile</h2>
-          <p className="text-gray-600">Signed in as {displayName}</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            Signed in as {displayName}
+          </p>
         </div>
 
         <div className="flex gap-3">
           <Link
             to="/cart"
-            className="px-4 py-2 border rounded hover:bg-gray-50"
+            className="px-4 py-2 border border-black/10 dark:border-white/10 rounded hover:bg-black/5 dark:hover:bg-white/10 transition"
           >
             Go to Cart
           </Link>
@@ -80,43 +103,54 @@ export default function Profile() {
 
       <h3 className="text-xl font-semibold mb-3">Your Orders</h3>
 
-      {orders.length === 0 ? (
-        <div className="border rounded p-10 text-center text-gray-600">
+      {loadingOrders ? (
+        <div className="border border-black/10 dark:border-white/10 rounded p-10 text-center text-gray-600 dark:text-gray-400">
+          Loading your orders…
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="border border-black/10 dark:border-white/10 rounded p-10 text-center text-gray-600 dark:text-gray-400">
           You have no orders yet.
         </div>
       ) : (
         <div className="space-y-4">
           {orders.map((o) => (
-            <div key={o.id} className="border rounded-lg p-5 bg-white">
+            <div
+              key={o.id}
+              className="border border-black/10 dark:border-white/10 rounded-2xl p-5 bg-white/70 dark:bg-white/5 backdrop-blur"
+            >
               <div className="flex flex-col md:flex-row md:justify-between gap-3">
                 <div>
-                  <div className="text-sm text-gray-500">Order ID</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Order ID
+                  </div>
                   <div className="font-semibold">{o.id}</div>
 
-                  <div className="mt-2 text-sm text-gray-600">
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                     Status:{" "}
-                    <span className="font-semibold">
+                    <span className="font-semibold text-black dark:text-white">
                       {(o.status || "PENDING_PAYMENT").replaceAll("_", " ")}
                     </span>
                   </div>
 
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
                     Total:{" "}
-                    <span className="font-semibold">
+                    <span className="font-semibold text-black dark:text-white">
                       ₦{Number(o.total || 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
 
                 <div className="min-w-[220px]">
-                  <div className="text-sm text-gray-500">Delivery</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Delivery
+                  </div>
                   <div className="font-medium">
                     {(o.deliveryMethod || "pickup").toUpperCase()}
                   </div>
 
                   <div className="mt-3">
                     <Link
-                      className="inline-block px-4 py-2 border rounded hover:bg-gray-50"
+                      className="inline-block px-4 py-2 border border-black/10 dark:border-white/10 rounded hover:bg-black/5 dark:hover:bg-white/10 transition"
                       to={`/order-success/${o.id}`}
                     >
                       View Order
@@ -125,12 +159,12 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="mt-4 border-t pt-4">
+              <div className="mt-4 border-t border-black/10 dark:border-white/10 pt-4">
                 <div className="text-sm font-medium mb-2">Items</div>
                 <div className="grid sm:grid-cols-2 gap-2 text-sm">
                   {(o.items || []).map((it, idx) => (
                     <div key={idx} className="flex justify-between gap-3">
-                      <span>
+                      <span className="text-gray-700 dark:text-gray-300">
                         {it.name}
                         {it.size ? ` (${it.size})` : ""}
                       </span>
@@ -144,7 +178,7 @@ export default function Profile() {
                 {o.note ? (
                   <div className="mt-4">
                     <div className="text-sm font-medium mb-1">Note</div>
-                    <div className="text-sm text-gray-700 whitespace-pre-wrap border rounded p-3 bg-gray-50">
+                    <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap border border-black/10 dark:border-white/10 rounded p-3 bg-black/5 dark:bg-white/5">
                       {o.note}
                     </div>
                   </div>
