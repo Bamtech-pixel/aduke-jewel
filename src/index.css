@@ -8,6 +8,14 @@
   --champagne-soft: #f4eadb;
 }
 
+/* TRUE BLACK luxury theme */
+.dark {
+  --bg-primary: #000000;
+  --bg-secondary: #0b0b0d;
+  --text-primary: #ffffff;
+  --text-muted: #b3b3b3;
+}
+
 /* Subtle luxury fade-in animation */
 @keyframes fadeIn {
   from {
