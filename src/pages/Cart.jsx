@@ -1,149 +1,167 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useMemo } from "react";
+import { Link } from "react-router-dom";
 
-const WHATSAPP_NUMBER = "09019027395";
+export default function Cart({ cart, setCart }) {
+  const total = (cart || []).reduce((sum, item) => sum + (item.price || 0), 0);
 
-export default function Cart({ cart = [], setCart }) {
-  const navigate = useNavigate();
-
-  const total = useMemo(() => {
-    return (cart || []).reduce(
-      (sum, it) => sum + Number(it.price || 0) * Number(it.qty || 1),
-      0
-    );
-  }, [cart]);
-
-  const removeItem = (index) => {
-    setCart((prev) => prev.filter((_, i) => i !== index));
+  const removeItem = (id) => {
+    setCart((prev) => prev.filter((x, i) => (x.id || i) !== id));
   };
 
   const clearCart = () => setCart([]);
 
+  const formatMoney = (n) => {
+    try {
+      return new Intl.NumberFormat("en-NG", {
+        style: "currency",
+        currency: "NGN",
+        maximumFractionDigits: 0,
+      }).format(n);
+    } catch {
+      return `₦${n}`;
+    }
+  };
+
   const buildWhatsAppMessage = () => {
     const lines = [];
-    lines.push("Hello Aduke_Jewels 👋");
-    lines.push("I want to order the following items:");
+    lines.push("Hello Aduke_Jewels, I want to order:");
     lines.push("");
 
-    cart.forEach((it, idx) => {
-      const name = it.name || "Item";
-      const size = it.size ? ` (${it.size})` : "";
-      const qty = it.qty ? ` x${it.qty}` : "";
-      const price = Number(it.price || 0);
-      lines.push(`${idx + 1}. ${name}${size}${qty} - ₦${price.toLocaleString()}`);
+    (cart || []).forEach((item, idx) => {
+      const name = item?.name || "Item";
+      const size = item?.size ? ` (${item.size})` : "";
+      const price = item?.price ? ` - ₦${item.price}` : "";
+      lines.push(`${idx + 1}. ${name}${size}${price}`);
+
+      const engr = item?.customization?.engraving?.trim();
+      const mem = item?.customization?.memory?.trim();
+
+      if (engr) lines.push(`   • Engraving: ${engr}`);
+      if (mem) lines.push(`   • Memory/QR: ${mem}`);
+
+      lines.push("");
     });
 
+    lines.push(`Total: ${formatMoney(total)}`);
     lines.push("");
-    lines.push(`Total: ₦${Number(total || 0).toLocaleString()}`);
-    lines.push("");
-    lines.push("Pickup or Delivery?:");
-    lines.push("Engraving text (if any):");
-    lines.push("Memory barcode? (Yes/No):");
-
+    lines.push("Delivery or Pickup? Please confirm.");
     return encodeURIComponent(lines.join("\n"));
   };
 
-  const checkoutOnWhatsapp = () => {
-    if (!cart?.length) return alert("Your cart is empty.");
-    const msg = buildWhatsAppMessage();
-    // Use international format helps sometimes, but your local works too:
-    // const wa = "2349019027395";
-    const wa = WHATSAPP_NUMBER;
-    window.open(`https://wa.me/${wa}?text=${msg}`, "_blank");
-  };
-
-  const checkoutOnWebsite = () => {
-    if (!cart?.length) return alert("Your cart is empty.");
-    navigate("/checkout");
-  };
+  const whatsappNumber = "2349019027395"; // Nigeria format without leading 0
+  const waLink = `https://wa.me/${whatsappNumber}?text=${buildWhatsAppMessage()}`;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-14">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Cart</h1>
-        {cart?.length ? (
-          <button
-            onClick={clearCart}
-            className="text-sm px-4 py-2 border rounded hover:bg-gray-50"
-          >
-            Clear cart
-          </button>
-        ) : null}
+    <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-3xl font-semibold text-white">Cart</h2>
+        <Link
+          to="/bracelets"
+          className="text-sm text-[#d6b37c] hover:underline"
+        >
+          Continue shopping →
+        </Link>
       </div>
 
-      {!cart?.length ? (
-        <div className="border rounded-2xl p-10 text-center">
-          <p className="text-gray-600 mb-6">Your cart is empty.</p>
+      {!cart || cart.length === 0 ? (
+        <div className="mt-10 border border-white/10 rounded-xl p-8 bg-white/5">
+          <p className="text-gray-300">Your cart is empty.</p>
           <Link
             to="/bracelets"
-            className="inline-block px-8 py-3 bg-black text-white rounded hover:opacity-90"
+            className="inline-block mt-4 px-6 py-2 rounded bg-white text-black hover:bg-[#d6b37c] transition"
           >
-            Start shopping
+            Shop Bracelets
           </Link>
         </div>
       ) : (
-        <div className="grid md:grid-cols-3 gap-8">
-          {/* ITEMS */}
-          <div className="md:col-span-2 space-y-4">
-            {cart.map((it, index) => (
-              <div key={index} className="border rounded-2xl p-4 flex gap-4">
-                <img
-                  src={it.image}
-                  alt={it.name}
-                  className="w-24 h-24 rounded-xl object-cover"
-                />
+        <>
+          <div className="mt-8 grid gap-4">
+            {cart.map((item, index) => {
+              const key = item.id ? item.id + "-" + index : index;
+              const engr = item?.customization?.engraving?.trim();
+              const mem = item?.customization?.memory?.trim();
 
-                <div className="flex-1">
-                  <p className="font-semibold">{it.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {it.size ? it.size : "—"}
-                    {it.qty ? ` · Qty: ${it.qty}` : ""}
-                  </p>
-                  <p className="mt-2 font-bold">
-                    ₦{Number(it.price || 0).toLocaleString()}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => removeItem(index)}
-                  className="text-sm px-3 py-2 border rounded hover:bg-gray-50 h-fit"
+              return (
+                <div
+                  key={key}
+                  className="border border-white/10 rounded-xl p-5 bg-white/5"
                 >
-                  Remove
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-lg font-semibold text-white">
+                        {item.name}
+                        {item.size ? (
+                          <span className="text-gray-400 font-normal">
+                            {" "}
+                            ({item.size})
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="text-sm text-gray-300 mt-1">
+                        {formatMoney(item.price || 0)}
+                      </div>
+
+                      {(engr || mem) && (
+                        <div className="mt-3 text-sm text-gray-300">
+                          {engr && (
+                            <div>
+                              <span className="text-gray-400">Engraving:</span>{" "}
+                              {engr}
+                            </div>
+                          )}
+                          {mem && (
+                            <div className="break-words">
+                              <span className="text-gray-400">Memory/QR:</span>{" "}
+                              {mem}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => removeItem(item.id || index)}
+                      className="px-3 py-2 border border-white/15 rounded hover:bg-white hover:text-black transition text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          {/* SUMMARY */}
-          <div className="border rounded-2xl p-6 h-fit">
-            <h2 className="text-xl font-semibold mb-4">Summary</h2>
-
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-gray-600">Total</p>
-              <p className="text-2xl font-bold">
-                ₦{Number(total || 0).toLocaleString()}
-              </p>
+          <div className="mt-10 border border-white/10 rounded-xl p-6 bg-black">
+            <div className="flex items-center justify-between">
+              <div className="text-gray-300">Total</div>
+              <div className="text-xl font-semibold text-white">
+                {formatMoney(total)}
+              </div>
             </div>
 
-            <button
-              onClick={checkoutOnWebsite}
-              className="w-full py-3 rounded-lg bg-black text-white hover:opacity-90"
-            >
-              Checkout (Pay on Website)
-            </button>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noreferrer"
+                className="px-6 py-3 rounded bg-white text-black hover:bg-[#d6b37c] transition font-semibold"
+              >
+                Checkout on WhatsApp
+              </a>
 
-            <button
-              onClick={checkoutOnWhatsapp}
-              className="w-full py-3 rounded-lg border mt-3 hover:bg-gray-50"
-            >
-              Checkout on WhatsApp
-            </button>
+              <button
+                onClick={clearCart}
+                className="px-6 py-3 rounded border border-white/15 text-white hover:bg-white/10 transition"
+              >
+                Clear cart
+              </button>
+            </div>
 
-            <p className="text-xs text-gray-500 mt-4">
-              Website checkout generates an Order Code + Payment QR and lets you track status.
+            <p className="text-xs text-gray-400 mt-4">
+              Your engraving notes will be included automatically in the WhatsApp message.
             </p>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
