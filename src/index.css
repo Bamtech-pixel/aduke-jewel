@@ -1,4 +1,25 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Brand tokens */
+:root {
+  --champagne: #d6b37c;
+  --champagne-soft: #f4eadb;
+}
+
+/* Subtle luxury fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 1.2s ease-out both;
+}
