@@ -1,36 +1,27 @@
 import { Link } from "react-router-dom";
 
 export default function Cart({ cart, setCart }) {
-  const total = (cart || []).reduce((sum, item) => sum + (item.price || 0), 0);
+  const items = cart || [];
 
-  const removeItem = (id) => {
-    setCart((prev) => prev.filter((x, i) => (x.id || i) !== id));
+  const total = items.reduce((sum, item) => sum + (item.price || 0), 0);
+
+  const removeAtIndex = (index) => {
+    setCart((prev) => prev.filter((_, i) => i !== index));
   };
 
   const clearCart = () => setCart([]);
 
-  const formatMoney = (n) => {
-    try {
-      return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency: "NGN",
-        maximumFractionDigits: 0,
-      }).format(n);
-    } catch {
-      return `₦${n}`;
-    }
-  };
+  const formatMoney = (n) => `₦${Number(n || 0).toLocaleString()}`;
 
   const buildWhatsAppMessage = () => {
     const lines = [];
     lines.push("Hello Aduke_Jewels, I want to order:");
     lines.push("");
 
-    (cart || []).forEach((item, idx) => {
+    items.forEach((item, idx) => {
       const name = item?.name || "Item";
       const size = item?.size ? ` (${item.size})` : "";
-      const price = item?.price ? ` - ₦${item.price}` : "";
-      lines.push(`${idx + 1}. ${name}${size}${price}`);
+      lines.push(`${idx + 1}. ${name}${size} - ${formatMoney(item.price)}`);
 
       const engr = item?.customization?.engraving?.trim();
       const mem = item?.customization?.memory?.trim();
@@ -47,7 +38,7 @@ export default function Cart({ cart, setCart }) {
     return encodeURIComponent(lines.join("\n"));
   };
 
-  const whatsappNumber = "2349019027395"; // Nigeria format without leading 0
+  const whatsappNumber = "2349019027395";
   const waLink = `https://wa.me/${whatsappNumber}?text=${buildWhatsAppMessage()}`;
 
   return (
@@ -62,7 +53,7 @@ export default function Cart({ cart, setCart }) {
         </Link>
       </div>
 
-      {!cart || cart.length === 0 ? (
+      {items.length === 0 ? (
         <div className="mt-10 border border-white/10 rounded-xl p-8 bg-white/5">
           <p className="text-gray-300">Your cart is empty.</p>
           <Link
@@ -75,14 +66,13 @@ export default function Cart({ cart, setCart }) {
       ) : (
         <>
           <div className="mt-8 grid gap-4">
-            {cart.map((item, index) => {
-              const key = item.id ? item.id + "-" + index : index;
+            {items.map((item, index) => {
               const engr = item?.customization?.engraving?.trim();
               const mem = item?.customization?.memory?.trim();
 
               return (
                 <div
-                  key={key}
+                  key={`${item.id || "item"}-${index}`}
                   className="border border-white/10 rounded-xl p-5 bg-white/5"
                 >
                   <div className="flex items-start justify-between gap-4">
@@ -98,7 +88,7 @@ export default function Cart({ cart, setCart }) {
                       </div>
 
                       <div className="text-sm text-gray-300 mt-1">
-                        {formatMoney(item.price || 0)}
+                        {formatMoney(item.price)}
                       </div>
 
                       {(engr || mem) && (
@@ -120,7 +110,7 @@ export default function Cart({ cart, setCart }) {
                     </div>
 
                     <button
-                      onClick={() => removeItem(item.id || index)}
+                      onClick={() => removeAtIndex(index)}
                       className="px-3 py-2 border border-white/15 rounded hover:bg-white hover:text-black transition text-sm"
                     >
                       Remove
@@ -158,7 +148,8 @@ export default function Cart({ cart, setCart }) {
             </div>
 
             <p className="text-xs text-gray-400 mt-4">
-              Your engraving notes will be included automatically in the WhatsApp message.
+              Engraving and Memory/QR notes will be included in your WhatsApp
+              checkout message.
             </p>
           </div>
         </>

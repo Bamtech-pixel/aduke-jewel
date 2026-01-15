@@ -7,10 +7,9 @@ export default function Necklaces({ addToCart }) {
   const [engraving, setEngraving] = useState("");
   const [memory, setMemory] = useState("");
 
-  const products = useMemo(
-    () => (byCategory?.necklaces ? byCategory.necklaces : []),
-    []
-  );
+  const products = useMemo(() => {
+    return byCategory?.necklaces ? byCategory.necklaces : [];
+  }, []);
 
   const handleAdd = (p) => {
     addToCart?.({
@@ -39,7 +38,7 @@ export default function Necklaces({ addToCart }) {
 
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((p) => (
-          <ProductCard key={p.id} product={p} addToCart={() => handleAdd(p)} />
+          <ProductCard key={p.id} product={p} onAdd={() => handleAdd(p)} />
         ))}
       </div>
     </div>
