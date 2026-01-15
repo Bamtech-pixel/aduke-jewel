@@ -8,7 +8,7 @@ export default function Bracelets({ addToCart }) {
   const [memory, setMemory] = useState("");
 
   const products = useMemo(() => {
-    return byCategory?.bracelets ? byCategory.bracelets : [];
+    return byCategory?.bracelets || [];
   }, []);
 
   const handleAdd = (p) => {
@@ -25,8 +25,10 @@ export default function Bracelets({ addToCart }) {
     <div className="max-w-7xl mx-auto px-6 py-10">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-semibold text-white">Bracelets</h2>
-          <p className="text-gray-400 mt-2">
+          <h2 className="text-3xl font-semibold text-gray-900 dark:text-white">
+            Bracelets
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             Choose your bracelet and add engraving details (optional).
           </p>
         </div>
@@ -37,12 +39,16 @@ export default function Bracelets({ addToCart }) {
         onChange={setEngraving}
         memoryValue={memory}
         onMemoryChange={setMemory}
-        showMemory={true}
+        showMemory
       />
 
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((p) => (
-          <ProductCard key={p.id} product={p} onAdd={() => handleAdd(p)} />
+          <ProductCard
+            key={p.id}
+            product={p}
+            onAdd={() => handleAdd(p)}
+          />
         ))}
       </div>
     </div>
