@@ -9,13 +9,9 @@ import Cart from "./pages/Cart";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
-import Checkout from "./pages/Checkout";
-import OrderSuccess from "./pages/OrderSuccess";
-import TrackOrder from "./pages/TrackOrder";
 
 const CART_KEY = "aduke_cart_v1";
 const CURRENT_USER_KEY = "aduke_current_user_v1";
-const THEME_KEY = "aduke_theme_v1"; // "light" | "dark"
 
 export default function App() {
   const [cart, setCart] = useState(() => {
@@ -36,39 +32,13 @@ export default function App() {
     }
   });
 
-  const [theme, setTheme] = useState(() => {
-    try {
-      return localStorage.getItem(THEME_KEY) || "light";
-    } catch {
-      return "light";
-    }
-  });
-
   useEffect(() => {
     try {
       localStorage.setItem(CART_KEY, JSON.stringify(cart));
     } catch {}
   }, [cart]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(currentUser));
-    } catch {}
-  }, [currentUser]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch {}
-    // apply to document for consistent styling
-    const root = document.documentElement;
-    if (theme === "dark") root.classList.add("dark");
-    else root.classList.remove("dark");
-  }, [theme]);
-
-  const addToCart = (product) =>
-    setCart((prev) => [...prev, { ...product, qty: product.qty || 1 }]);
-
+  const addToCart = (product) => setCart((prev) => [...prev, product]);
   const cartCount = useMemo(() => cart.length, [cart]);
 
   return (
@@ -76,8 +46,6 @@ export default function App() {
       cartCount={cartCount}
       currentUser={currentUser}
       onLogout={() => setCurrentUser(null)}
-      theme={theme}
-      setTheme={setTheme}
     >
       <Routes>
         <Route path="/" element={<Home />} />
@@ -89,76 +57,86 @@ export default function App() {
         <Route path="/login" element={<Auth onLogin={(u) => setCurrentUser(u)} />} />
         <Route path="/profile" element={<Profile onLogout={() => setCurrentUser(null)} />} />
         <Route path="/admin" element={<Admin />} />
-
-        {/* Website checkout flow */}
-        <Route path="/checkout" element={<Checkout cart={cart} setCart={setCart} />} />
-        <Route path="/order-success" element={<OrderSuccess />} />
-        <Route path="/track" element={<TrackOrder />} />
       </Routes>
     </Shell>
   );
 }
 
-function Shell({ children, cartCount, currentUser, onLogout, theme, setTheme }) {
+function Shell({ children, cartCount, currentUser, onLogout }) {
   const navigate = useNavigate();
 
   const logout = () => {
+    try {
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(null));
+    } catch {}
     onLogout?.();
     navigate("/");
   };
 
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
-
   return (
-    <div className="min-h-screen bg-[#fbf7f0] text-gray-900 dark:bg-[#0b0b0c] dark:text-gray-100">
-      {/* NAVBAR */}
-      <header className="border-b border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/20 backdrop-blur">
+    <div className="min-h-screen bg-white text-gray-900 font-sans">
+      {/* Inline “safe” styles for subtle animation + champagne glow */}
+      <style>{`
+        @keyframes adukeFadeUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes adukeGlow {
+          0%, 100% { filter: drop-shadow(0 0 0 rgba(214,179,124,0)); }
+          50% { filter: drop-shadow(0 10px 22px rgba(214,179,124,0.22)); }
+        }
+      `}</style>
+
+      <header className="border-b bg-white/90 backdrop-blur">
         <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2">
-            {/* subtle "watch dot" */}
-            <span className="w-2.5 h-2.5 rounded-full bg-champagne-500 shadow-sm" />
+          <Link to="/" className="flex items-center gap-3 group">
+            {/* “Cartier panther vibe” alternative: a tiny watch mark that gently glows */}
+            <span
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full border"
+              style={{ borderColor: "#e8d6b8" }}
+              title="Aduke_Jewels"
+            >
+              <WatchMark />
+            </span>
+
             <h1 className="text-2xl font-semibold tracking-wide">
-              Aduke<span className="text-gray-500 dark:text-gray-400">_Jewels</span>
+              Aduke<span className="text-gray-500">_Jewels</span>
             </h1>
+
+            {/* Champagne accent underline */}
+            <span
+              className="hidden sm:inline-block h-[2px] w-10 rounded-full"
+              style={{ background: "#d6b37c" }}
+            />
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-            <Link className="hover:text-champagne-700" to="/bracelets">
-              Bracelets
-            </Link>
-            <Link className="hover:text-champagne-700" to="/necklaces">
-              Necklaces
-            </Link>
-            <Link className="hover:text-champagne-700" to="/watches">
-              Watches
-            </Link>
-            <Link className="hover:text-champagne-700" to="/sets">
-              Sets
+          <nav className="flex items-center gap-8 text-sm font-medium">
+            <Link className="hover:opacity-80" to="/bracelets">Bracelets</Link>
+            <Link className="hover:opacity-80" to="/necklaces">Necklaces</Link>
+            <Link className="hover:opacity-80" to="/watches">Watches</Link>
+            <Link className="hover:opacity-80" to="/sets">Sets</Link>
+
+            <Link to="/cart" className="font-semibold hover:opacity-80">
+              Cart <span className="text-gray-500">({cartCount})</span>
             </Link>
 
-            <Link to="/cart" className="font-semibold hover:text-champagne-700">
-              Cart <span className="text-gray-500 dark:text-gray-400">({cartCount})</span>
-            </Link>
-
-            <button
-              onClick={toggleTheme}
-              className="px-3 py-2 border border-black/10 dark:border-white/10 rounded-lg hover:bg-black/5 dark:hover:bg-white/10"
-              title="Toggle theme"
+            <Link
+              to="/admin"
+              className="px-3 py-2 border rounded hover:bg-gray-50"
+              title="Admin"
             >
-              {theme === "dark" ? "Light" : "Dark"}
-            </button>
+              Admin
+            </Link>
 
             {currentUser ? (
               <>
-                <Link
-                  to="/profile"
-                  className="px-4 py-2 border border-black/10 dark:border-white/10 rounded-lg hover:bg-black/5 dark:hover:bg-white/10"
-                >
+                <Link to="/profile" className="px-4 py-2 border rounded hover:bg-gray-50">
                   Profile
                 </Link>
                 <button
                   onClick={logout}
-                  className="px-4 py-2 rounded-lg border border-champagne-500 text-champagne-800 dark:text-champagne-200 hover:bg-champagne-500 hover:text-white transition"
+                  className="px-4 py-2 border rounded hover:bg-black hover:text-white transition"
+                  type="button"
                 >
                   Logout
                 </button>
@@ -166,45 +144,34 @@ function Shell({ children, cartCount, currentUser, onLogout, theme, setTheme }) 
             ) : (
               <Link
                 to="/login"
-                className="px-4 py-2 rounded-lg border border-champagne-500 text-champagne-800 dark:text-champagne-200 hover:bg-champagne-500 hover:text-white transition"
+                className="px-4 py-2 border rounded transition"
+                style={{
+                  borderColor: "#d6b37c",
+                  color: "#111827",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#d6b37c";
+                  e.currentTarget.style.color = "white";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "#111827";
+                }}
               >
                 Login
               </Link>
             )}
           </nav>
-
-          {/* Mobile quick actions */}
-          <div className="md:hidden flex items-center gap-3">
-            <button
-              onClick={toggleTheme}
-              className="px-3 py-2 border border-black/10 dark:border-white/10 rounded-lg"
-            >
-              {theme === "dark" ? "☀️" : "🌙"}
-            </button>
-            <Link
-              to="/cart"
-              className="px-3 py-2 border border-black/10 dark:border-white/10 rounded-lg"
-            >
-              🛒 {cartCount}
-            </Link>
-          </div>
         </div>
       </header>
 
-      <main>{children}</main>
+      {children}
 
-      {/* FOOTER */}
-      <footer className="mt-16 border-t border-black/10 dark:border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-10 text-sm text-gray-600 dark:text-gray-400">
-          <p className="font-semibold text-gray-900 dark:text-gray-100">
-            Aduke_Jewels
-          </p>
+      <footer className="border-t py-10 mt-20">
+        <div className="max-w-7xl mx-auto px-6 text-center text-sm text-gray-500">
+          <p>© {new Date().getFullYear()} Aduke_Jewels. All rights reserved.</p>
           <p className="mt-2">
-            WhatsApp: <span className="font-medium">09019027395</span> · Email:{" "}
-            <span className="font-medium">damilola1902@gmail.com</span>
-          </p>
-          <p className="mt-4 text-xs">
-            © {new Date().getFullYear()} Aduke_Jewels. All rights reserved.
+            WhatsApp: 09019027395 · Email: damilola1902@gmail.com
           </p>
         </div>
       </footer>
@@ -214,67 +181,142 @@ function Shell({ children, cartCount, currentUser, onLogout, theme, setTheme }) 
 
 function Home() {
   return (
-    <section className="max-w-7xl mx-auto px-6 py-24 text-center">
-      <p className="text-sm tracking-[0.25em] uppercase text-gray-600 dark:text-gray-400">
-        Unisex · Engraving · Memory Barcode
-      </p>
-
-      <h2 className="mt-5 text-4xl md:text-6xl font-semibold leading-tight">
-        Jewelry For Every Journey
-      </h2>
-
-      <p className="mt-6 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-        Personalized bracelets, necklaces, watches, and engraved pieces crafted
-        to hold memories, meaning, and elegance — with optional Memory Barcode
-        engraving that can open your picture or text.
-      </p>
-
-      <div className="mt-10 flex justify-center gap-4 flex-wrap">
-        <Link
-          to="/bracelets"
-          className="px-10 py-3 rounded-lg bg-black text-white hover:opacity-90"
+    <main className="relative overflow-hidden">
+      {/* Soft champagne glow background (safe, no dependencies) */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(900px 400px at 50% 0%, rgba(214,179,124,0.22), rgba(255,255,255,0) 60%), linear-gradient(#ffffff, #ffffff)",
+        }}
+      />
+      <div className="relative max-w-7xl mx-auto px-6 py-24 text-center">
+        {/* Top micro badge */}
+        <div
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border bg-white/70 backdrop-blur"
+          style={{ borderColor: "#e8d6b8", animation: "adukeFadeUp 700ms ease both" }}
         >
-          Shop Bracelets
-        </Link>
-        <Link
-          to="/watches"
-          className="px-10 py-3 rounded-lg border border-champagne-500 text-champagne-800 dark:text-champagne-200 hover:bg-champagne-500 hover:text-white transition"
-        >
-          Shop Watches
-        </Link>
-        <Link
-          to="/track"
-          className="px-10 py-3 rounded-lg border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10"
-        >
-          Track Order
-        </Link>
-      </div>
+          <span
+            className="inline-block w-2 h-2 rounded-full"
+            style={{ background: "#d6b37c" }}
+          />
+          <span className="text-xs tracking-wide text-gray-700">
+            Engrave memories • Barcode jewelry • Unisex
+          </span>
+        </div>
 
-      {/* Category preview cards */}
-      <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 text-left">
-        {[
-          { title: "Bracelets", to: "/bracelets" },
-          { title: "Necklaces", to: "/necklaces" },
-          { title: "Watches", to: "/watches" },
-          { title: "Sets & Combos", to: "/sets" },
-        ].map((c) => (
+        <h2
+          className="mt-8 text-4xl md:text-6xl font-semibold"
+          style={{ animation: "adukeFadeUp 900ms ease 120ms both" }}
+        >
+          Jewelry For Every Journey
+        </h2>
+
+        <p
+          className="mt-6 text-gray-600 max-w-2xl mx-auto"
+          style={{ animation: "adukeFadeUp 900ms ease 220ms both" }}
+        >
+          Personalized bracelets, necklaces, watches, and engraved pieces crafted
+          to hold memories, meaning, and elegance.
+        </p>
+
+        <div
+          className="mt-10 flex justify-center gap-4 flex-wrap"
+          style={{ animation: "adukeFadeUp 900ms ease 320ms both" }}
+        >
           <Link
-            key={c.title}
-            to={c.to}
-            className="group border border-black/10 dark:border-white/10 rounded-2xl p-6 bg-white/70 dark:bg-white/5 backdrop-blur hover:shadow-sm transition"
+            to="/bracelets"
+            className="px-10 py-3 rounded text-white hover:opacity-95"
+            style={{ background: "#111827" }}
           >
-            <div className="flex items-center justify-between">
-              <p className="font-semibold">{c.title}</p>
-              <span className="text-champagne-600 group-hover:text-champagne-800 transition">
-                →
-              </span>
-            </div>
-            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-              Explore premium engraved pieces with clean, luxury finishing.
-            </p>
+            Shop Now
           </Link>
-        ))}
+
+          <a
+            href="https://wa.me/2349019027395?text=Hi%20Aduke_Jewels%2C%20I%20want%20to%20customize%20a%20jewelry%20piece."
+            target="_blank"
+            rel="noreferrer"
+            className="px-10 py-3 rounded border hover:bg-white"
+            style={{ borderColor: "#d6b37c" }}
+          >
+            Customize Jewelry
+          </a>
+        </div>
+
+        {/* “Luxury card row” like clean brand feel */}
+        <div
+          className="mt-14 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left"
+          style={{ animation: "adukeFadeUp 900ms ease 420ms both" }}
+        >
+          <FeatureCard
+            title="Barcode Jewelry"
+            desc="Link your piece to a memory: a photo, message, or page."
+          />
+          <FeatureCard
+            title="Pickup or Delivery"
+            desc="Choose what’s easiest. Track your order status after checkout."
+          />
+          <FeatureCard
+            title="Clean Finishing"
+            desc="Engraving designed to last — smooth edges and premium feel."
+          />
+        </div>
       </div>
-    </section>
+    </main>
+  );
+}
+
+function FeatureCard({ title, desc }) {
+  return (
+    <div
+      className="border rounded-xl p-5 bg-white/80 backdrop-blur"
+      style={{ borderColor: "#efe2cc" }}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className="inline-block w-2 h-2 rounded-full"
+          style={{ background: "#d6b37c" }}
+        />
+        <h3 className="font-semibold">{title}</h3>
+      </div>
+      <p className="mt-2 text-sm text-gray-600">{desc}</p>
+    </div>
+  );
+}
+
+function WatchMark() {
+  // tiny watch icon (SVG) — safe & lightweight
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      style={{ animation: "adukeGlow 2.8s ease-in-out infinite" }}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M9 4.5h6M9 19.5h6"
+        stroke="#d6b37c"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <rect
+        x="7"
+        y="6.5"
+        width="10"
+        height="11"
+        rx="3"
+        stroke="#111827"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M12 10v3l2 1"
+        stroke="#111827"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
