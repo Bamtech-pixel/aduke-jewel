@@ -1,167 +1,237 @@
-import { useMemo, useState } from "react";
-import { addDoc, collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
-import { useNavigate } from "react-router-dom";
+// src/pages/Checkout.jsx
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
-const PAYMENT_ACCOUNTS = [
-  { bank: "Wema Bank", accountNumber: "0243897830", accountName: "Alabi Oluwadamilola" },
-  { bank: "UBA", accountNumber: "2283546978", accountName: "Alabi Oluwadamilola" },
-];
-
-export default function Checkout({ cartItems = [], clearCart }) {
+export default function Checkout({ cart, clearCart }) {
   const navigate = useNavigate();
 
-  const total = useMemo(() => {
-    return (cartItems || []).reduce((sum, it) => sum + Number(it.price || 0) * Number(it.qty || 1), 0);
-  }, [cartItems]);
-
-  const [deliveryType, setDeliveryType] = useState("Pickup"); // Pickup | Delivery
-  const [fullName, setFullName] = useState("");
-  const [whatsApp, setWhatsApp] = useState("");
-  const [address, setAddress] = useState("");
-
-  const [engravingText, setEngravingText] = useState("");
-  const [memoryBarcode, setMemoryBarcode] = useState(false);
-  const [memoryDetails, setMemoryDetails] = useState("");
-
+  const [user, setUser] = useState(null);
+  const [deliveryMethod, setDeliveryMethod] = useState("pickup"); // pickup | delivery
+  const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const placeOrder = async () => {
-    if (!cartItems?.length) return alert("Your cart is empty.");
-    if (!fullName.trim()) return alert("Please enter your full name.");
-    if (!whatsApp.trim()) return alert("Please enter your WhatsApp number.");
-    if (deliveryType === "Delivery" && !address.trim()) return alert("Please enter delivery address.");
+  // Firebase user (REAL source of truth)
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u || null));
+    return () => unsub();
+  }, []);
+
+  const total = useMemo(() => {
+    return (cart || []).reduce((sum, it) => sum + Number(it.price || 0), 0);
+  }, [cart]);
+
+  // Create a WhatsApp message (includes engraving/memory)
+  const whatsappText = useMemo(() => {
+    const lines = (cart || []).map((it, idx) => {
+      const size = it.size ? ` (${it.size})` : "";
+      const custom = it.customization
+        ? ` | Engraving: ${it.customization.engraving || "-"} | Memory: ${
+            it.customization.memory || "-"
+          }`
+        : "";
+      return `${idx + 1}. ${it.name}${size} - ₦${Number(it.price || 0).toLocaleString()}${custom}`;
+    });
+
+    const delivery = `Delivery: ${deliveryMethod.toUpperCase()}`;
+    const notes = note.trim() ? `Note: ${note.trim()}` : "";
+    const t = `Total: ₦${Number(total || 0).toLocaleString()}`;
+
+    return encodeURIComponent(
+      [
+        "Hello Aduke_Jewels, I want to place an order:",
+        "",
+        ...lines,
+        "",
+        delivery,
+        notes,
+        t,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+  }, [cart, deliveryMethod, note, total]);
+
+  const whatsappLink = `https://wa.me/2349019027395?text=${whatsappText}`;
+
+  // WEB CHECKOUT = create order in Firestore and go to order-success page
+  const payOnWeb = async () => {
+    if (!user) {
+      alert("Please login first to use Web Checkout.");
+      navigate("/login");
+      return;
+    }
+
+    if (!cart || cart.length === 0) {
+      alert("Your cart is empty.");
+      return;
+    }
 
     setLoading(true);
     try {
-      const orderPayload = {
+      const order = {
         createdAt: serverTimestamp(),
-        status: "Pending",
-        customer: { fullName: fullName.trim(), whatsApp: whatsApp.trim() },
-        deliveryType,
-        address: deliveryType === "Delivery" ? address.trim() : "",
-        engravingText: engravingText.trim(),
-        memoryBarcode,
-        memoryDetails: memoryBarcode ? memoryDetails.trim() : "",
-        payment: { method: "Bank Transfer", accounts: PAYMENT_ACCOUNTS },
-        items: cartItems.map((it) => ({
-          id: it.id || "",
-          name: it.name || "",
+        updatedAt: serverTimestamp(),
+
+        userId: user.uid,
+        userEmail: user.email || "",
+
+        status: "PENDING_PAYMENT",
+        deliveryMethod,
+        note: note.trim(),
+
+        items: cart.map((it) => ({
+          id: it.id,
+          name: it.name,
           size: it.size || "",
-          image: it.image || "",
           price: Number(it.price || 0),
-          qty: Number(it.qty || 1),
+          image: it.image || "",
+          customization: it.customization || null,
         })),
+
         total: Number(total || 0),
       };
 
-      const orderRef = await addDoc(collection(db, "orders"), orderPayload);
+      const ref = await addDoc(collection(db, "orders"), order);
 
-      await setDoc(doc(db, "orderPublic", orderRef.id), {
-        createdAt: serverTimestamp(),
-        status: "Pending",
-        total: Number(total || 0),
-        deliveryType,
-      });
-
+      // Clear cart after creating order
       clearCart?.();
-      navigate(`/order-success?orderId=${encodeURIComponent(orderRef.id)}`);
+      navigate(`/order-success/${ref.id}`);
     } catch (e) {
       console.error(e);
-      alert("Failed to place order. Check console.");
+      alert("Failed to create order. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-14">
-      <h1 className="text-3xl font-bold mb-2">Checkout</h1>
-      <p className="text-gray-600 mb-8">
-        After placing order, you’ll get an <b>Order Code</b> + <b>Payment QR</b>. You can track delivery status later.
-      </p>
-
-      <div className="grid md:grid-cols-2 gap-8">
-        <div className="border rounded-2xl p-6">
-          <h2 className="text-xl font-semibold mb-4">Customer Details</h2>
-
-          <label className="text-sm text-gray-600">Full Name</label>
-          <input className="w-full border rounded-lg p-3 mb-4 mt-1"
-            value={fullName} onChange={(e) => setFullName(e.target.value)} />
-
-          <label className="text-sm text-gray-600">WhatsApp Number</label>
-          <input className="w-full border rounded-lg p-3 mb-4 mt-1"
-            value={whatsApp} onChange={(e) => setWhatsApp(e.target.value)} />
-
-          <label className="text-sm text-gray-600">Pickup or Delivery</label>
-          <select className="w-full border rounded-lg p-3 mb-4 mt-1 bg-white"
-            value={deliveryType} onChange={(e) => setDeliveryType(e.target.value)}>
-            <option>Pickup</option>
-            <option>Delivery</option>
-          </select>
-
-          {deliveryType === "Delivery" ? (
-            <>
-              <label className="text-sm text-gray-600">Delivery Address</label>
-              <textarea className="w-full border rounded-lg p-3 mb-4 mt-1"
-                value={address} onChange={(e) => setAddress(e.target.value)} rows={3} />
-            </>
-          ) : null}
-
-          <hr className="my-6" />
-
-          <h3 className="text-lg font-semibold mb-3">Customization</h3>
-
-          <label className="text-sm text-gray-600">Engraving text (optional)</label>
-          <input className="w-full border rounded-lg p-3 mb-4 mt-1"
-            value={engravingText} onChange={(e) => setEngravingText(e.target.value)} />
-
-          <div className="flex items-center gap-3 mb-3">
-            <input type="checkbox" checked={memoryBarcode} onChange={(e) => setMemoryBarcode(e.target.checked)} />
-            <p className="text-sm">
-              Add <b>Memory Barcode</b> (links to text/photo you want)
-            </p>
-          </div>
-
-          {memoryBarcode ? (
-            <>
-              <label className="text-sm text-gray-600">Memory details</label>
-              <input className="w-full border rounded-lg p-3 mb-2 mt-1"
-                value={memoryDetails} onChange={(e) => setMemoryDetails(e.target.value)} />
-              <p className="text-xs text-gray-500">
-                After payment, send the photo/text to us on WhatsApp.
-              </p>
-            </>
-          ) : null}
+    <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-semibold">Checkout</h2>
+          <p className="text-gray-600 mt-2">
+            Choose WhatsApp checkout or pay on the website (transfer / barcode).
+          </p>
         </div>
 
-        <div className="border rounded-2xl p-6">
-          <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+        <Link to="/cart" className="px-4 py-2 border rounded hover:bg-gray-50">
+          Back to Cart
+        </Link>
+      </div>
+
+      <div className="mt-8 grid md:grid-cols-2 gap-6">
+        {/* LEFT: Options */}
+        <div className="border rounded-2xl p-6 bg-white">
+          <h3 className="text-lg font-semibold mb-4">Order Options</h3>
 
           <div className="space-y-3">
-            {(cartItems || []).map((it, idx) => (
-              <div key={idx} className="flex gap-3 items-center border rounded-xl p-3">
-                <img src={it.image} alt={it.name} className="w-14 h-14 rounded-lg object-cover" />
-                <div className="flex-1">
-                  <p className="font-medium">{it.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {it.size ? it.size : ""} {it.qty ? `· Qty: ${it.qty}` : ""}
-                  </p>
+            <label className="block text-sm font-medium">Delivery method</label>
+            <select
+              value={deliveryMethod}
+              onChange={(e) => setDeliveryMethod(e.target.value)}
+              className="w-full border rounded px-4 py-3 bg-white text-black"
+            >
+              <option value="pickup">Pick up</option>
+              <option value="delivery">Delivery</option>
+            </select>
+
+            <label className="block text-sm font-medium mt-4">
+              Note / Engraving Instructions (optional)
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="E.g. Name + memory line, delivery address, extra instructions..."
+              className="w-full border rounded px-4 py-3 bg-white text-black min-h-[110px]"
+            />
+
+            <div className="mt-4 text-sm text-gray-600">
+              Total:{" "}
+              <span className="font-semibold">
+                ₦{Number(total || 0).toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="mt-6 flex flex-col gap-3">
+            {/* WhatsApp checkout ALWAYS available */}
+            <a
+              href={whatsappLink}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full text-center px-5 py-3 rounded-lg border border-black hover:bg-black hover:text-white transition font-semibold"
+            >
+              Checkout on WhatsApp
+            </a>
+
+            {/* Web checkout requires login */}
+            <button
+              onClick={payOnWeb}
+              disabled={loading}
+              className="w-full px-5 py-3 rounded-lg bg-black text-white hover:opacity-90 transition font-semibold disabled:opacity-60"
+              type="button"
+            >
+              {loading ? "Creating order..." : "Pay on Website (Transfer / Barcode)"}
+            </button>
+
+            {!user ? (
+              <p className="text-xs text-gray-500 text-center">
+                You must be logged in to use Web Checkout.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {/* RIGHT: Cart summary */}
+        <div className="border rounded-2xl p-6 bg-white">
+          <h3 className="text-lg font-semibold mb-4">Your Items</h3>
+
+          {!cart || cart.length === 0 ? (
+            <div className="text-gray-600">Cart is empty.</div>
+          ) : (
+            <div className="space-y-3">
+              {cart.map((it, idx) => (
+                <div key={idx} className="flex items-center gap-3 border-b pb-3">
+                  <div className="w-14 h-14 rounded bg-gray-100 overflow-hidden">
+                    {it.image ? (
+                      <img
+                        src={it.image}
+                        alt={it.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : null}
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm">
+                      {it.name} {it.size ? `(${it.size})` : ""}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      ₦{Number(it.price || 0).toLocaleString()}
+                    </div>
+
+                    {it.customization?.engraving || it.customization?.memory ? (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Engraving: {it.customization?.engraving || "-"} | Memory:{" "}
+                        {it.customization?.memory || "-"}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-                <p className="font-semibold">₦{Number(it.price || 0).toLocaleString()}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          <div className="mt-6 flex items-center justify-between">
-            <p className="text-gray-600">Total</p>
-            <p className="text-2xl font-bold">₦{Number(total || 0).toLocaleString()}</p>
+          <div className="mt-4 text-sm">
+            Total:{" "}
+            <span className="font-semibold">
+              ₦{Number(total || 0).toLocaleString()}
+            </span>
           </div>
-
-          <button disabled={loading} onClick={placeOrder}
-            className="mt-6 w-full bg-black text-white py-3 rounded-lg hover:opacity-90 disabled:opacity-60">
-            {loading ? "Placing order..." : "Place Order"}
-          </button>
         </div>
       </div>
     </div>

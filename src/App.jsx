@@ -168,22 +168,38 @@ function Shell({ children, cartCount, currentUser, onLogout, theme, setTheme }) 
 
 function Home() {
   return (
-    <section className="max-w-6xl mx-auto px-6 py-24 text-center">
-      <h2 className="text-4xl md:text-5xl font-semibold mb-6">
-        Jewelry For Every Journey
-      </h2>
+    <section className="relative overflow-hidden">
+      {/* Luxury background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black via-black to-[#0a0a0a]" />
 
-      <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-        Personalized bracelets, necklaces, watches, and engraved pieces
-        crafted to hold memories, meaning, and elegance.
-      </p>
+      {/* Champagne glow */}
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full bg-[#d6b37c]/20 blur-[120px]" />
 
-      <Link
-        to="/bracelets"
-        className="px-10 py-3 bg-black text-white rounded hover:opacity-90"
-      >
-        Shop Now
-      </Link>
+      <div className="relative max-w-6xl mx-auto px-6 py-24 text-center">
+        <p className="inline-block text-xs px-4 py-2 rounded-full border border-[#d6b37c]/40 text-[#f2e3c6] bg-[#d6b37c]/10 mb-6">
+          ✦ Personalized engraving available
+        </p>
+
+        <h2 className="text-4xl md:text-5xl font-semibold mb-6 text-white">
+          Jewelry For Every Journey
+        </h2>
+
+        <p className="text-gray-300 max-w-2xl mx-auto mb-10">
+          Personalized bracelets, necklaces, watches, and engraved pieces
+          crafted to hold memories, meaning, and elegance.
+        </p>
+
+        <Link
+          to="/bracelets"
+          className="inline-block px-10 py-3 rounded-xl bg-white text-black font-semibold hover:bg-[#d6b37c] transition"
+        >
+          Shop Now
+        </Link>
+
+        <div className="mt-12 flex justify-center">
+          <div className="h-[2px] w-20 bg-[#d6b37c]" />
+        </div>
+      </div>
     </section>
   );
 }
