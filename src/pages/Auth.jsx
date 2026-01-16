@@ -1,96 +1,135 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { auth } from "../firebase";
 
 export default function Auth({ onLogin }) {
   const navigate = useNavigate();
 
-  const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mode, setMode] = useState("login"); // login | signup
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      const res = isSignup
-        ? await createUserWithEmailAndPassword(auth, email, password)
-        : await signInWithEmailAndPassword(auth, email, password);
+      let userCred;
+      if (mode === "login") {
+        userCred = await signInWithEmailAndPassword(
+          auth,
+          email.trim(),
+          password
+        );
+      } else {
+        userCred = await createUserWithEmailAndPassword(
+          auth,
+          email.trim(),
+          password
+        );
+      }
 
-      onLogin?.(res.user);
+      onLogin?.({
+        uid: userCred.user.uid,
+        email: userCred.user.email,
+      });
+
       navigate("/");
     } catch (err) {
       setError(err.message || "Authentication failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto px-6 py-20">
-      <h2 className="text-3xl font-semibold mb-6">
-        {isSignup ? "Create Account" : "Login"}
-      </h2>
+    <div className="min-h-[80vh] flex items-center justify-center px-6">
+      <div className="w-full max-w-md border border-black/10 dark:border-white/10 rounded-2xl p-8 bg-white dark:bg-black">
+        <h2 className="text-2xl font-semibold mb-2">
+          {mode === "login" ? "Welcome Back" : "Create Account"}
+        </h2>
 
-      <form onSubmit={submit} className="space-y-4">
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full border rounded px-4 py-3"
-        />
-
-        <input
-          type="password"
-          placeholder="Minimum 6 characters"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full border rounded px-4 py-3"
-        />
+        <p className="text-sm text-gray-500 mb-6">
+          {mode === "login"
+            ? "Login to continue"
+            : "Sign up to track orders and checkout faster"}
+        </p>
 
         {error && (
-          <div className="text-sm text-red-600 border border-red-200 p-3 rounded">
+          <div className="mb-4 text-sm text-red-600 border border-red-200 rounded px-3 py-2">
             {error}
           </div>
         )}
 
-        <button
-          type="submit"
-          className="w-full px-5 py-3 bg-black text-white rounded hover:opacity-90"
-        >
-          {isSignup ? "Sign up" : "Login"}
-        </button>
-      </form>
+        <form onSubmit={submit} className="space-y-4">
+          {/* EMAIL */}
+          <input
+            type="email"
+            required
+            placeholder="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full border rounded px-4 py-3
+                       bg-white text-black placeholder:text-gray-500
+                       dark:bg-white dark:text-black dark:placeholder:text-gray-500"
+          />
 
-      <div className="mt-6 text-sm text-center">
-        {isSignup ? (
-          <>
-            Already have an account?{" "}
-            <button
-              onClick={() => setIsSignup(false)}
-              className="underline"
-            >
-              Login
-            </button>
-          </>
-        ) : (
-          <>
-            Don’t have an account?{" "}
-            <button
-              onClick={() => setIsSignup(true)}
-              className="underline"
-            >
-              Sign up
-            </button>
-          </>
-        )}
+          {/* PASSWORD (FIXED VISIBILITY) */}
+          <input
+            type="password"
+            required
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full border rounded px-4 py-3
+                       bg-white text-black placeholder:text-gray-500
+                       dark:bg-white dark:text-black dark:placeholder:text-gray-500"
+          />
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg bg-black text-white
+                       hover:opacity-90 transition disabled:opacity-60"
+          >
+            {loading
+              ? "Please wait..."
+              : mode === "login"
+              ? "Login"
+              : "Create Account"}
+          </button>
+        </form>
+
+        <div className="mt-6 text-sm text-center text-gray-500">
+          {mode === "login" ? (
+            <>
+              Don’t have an account?{" "}
+              <button
+                onClick={() => setMode("signup")}
+                className="font-medium text-black dark:text-white underline"
+              >
+                Sign up
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <button
+                onClick={() => setMode("login")}
+                className="font-medium text-black dark:text-white underline"
+              >
+                Login
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
