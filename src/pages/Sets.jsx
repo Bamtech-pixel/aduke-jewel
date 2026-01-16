@@ -1,15 +1,13 @@
 import { useMemo, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import EngravingPreview from "../components/EngravingPreview";
-import { byCategory } from "../data/products";
+import { byCategory } from "../data/products.js";
 
 export default function Sets({ addToCart }) {
   const [engraving, setEngraving] = useState("");
   const [memory, setMemory] = useState("");
 
-  const products = useMemo(() => {
-    return byCategory?.sets ? byCategory.sets : [];
-  }, []);
+  const products = useMemo(() => byCategory.sets || [], []);
 
   const handleAdd = (p) => {
     addToCart?.({
@@ -23,10 +21,8 @@ export default function Sets({ addToCart }) {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
-      <h2 className="text-3xl font-semibold text-white">Sets</h2>
-      <p className="text-gray-400 mt-2">
-        Add optional engraving instructions for your set.
-      </p>
+      <h2 className="text-3xl font-semibold">Sets</h2>
+      <p className="text-gray-500 mt-2">Watches + bracelets combos.</p>
 
       <EngravingPreview
         value={engraving}

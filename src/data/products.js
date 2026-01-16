@@ -1,8 +1,10 @@
+// src/data/products.js
+
 /* =========================
-   BRACELETS (12mm & 15mm handled properly)
+   BRACELETS (12mm & 15mm)
    ========================= */
 
-export const bracelets = [
+const bracelets = [
   {
     id: "b-gold-12",
     name: "Engraved Gold Bracelet",
@@ -53,48 +55,20 @@ export const bracelets = [
     image: "/images/engraved-black-bracelet-15mm.jpg",
   },
 
-  /* Barcode Bracelets */
+  // Simple “plain” bracelet photos you renamed
   {
-    id: "bb-gold-12",
-    name: "Engraved Gold Bracelet with Barcode",
-    size: "12mm",
-    price: 17000,
-    image: "/images/engraved-gold-bracelet-12mm.jpg",
+    id: "b-gold-plain",
+    name: "Gold Bracelet",
+    size: "Standard",
+    price: 12000,
+    image: "/images/gold-bracelet.jpg",
   },
   {
-    id: "bb-gold-15",
-    name: "Engraved Gold Bracelet with Barcode",
-    size: "15mm",
-    price: 18000,
-    image: "/images/engraved-gold-bracelet-15mm.jpg",
-  },
-  {
-    id: "bb-silver-12",
-    name: "Engraved Silver Bracelet with Barcode",
-    size: "12mm",
-    price: 17000,
-    image: "/images/engraved-silver-bracelet-12mm.jpg",
-  },
-  {
-    id: "bb-silver-15",
-    name: "Engraved Silver Bracelet with Barcode",
-    size: "15mm",
-    price: 18000,
-    image: "/images/engraved-silver-bracelet-15mm.jpg",
-  },
-  {
-    id: "bb-black-12",
-    name: "Engraved Black Bracelet with Barcode",
-    size: "12mm",
-    price: 17000,
-    image: "/images/engraved-black-bracelet-12mm.jpg",
-  },
-  {
-    id: "bb-black-15",
-    name: "Engraved Black Bracelet with Barcode",
-    size: "15mm",
-    price: 18000,
-    image: "/images/engraved-black-bracelet-15mm.jpg",
+    id: "b-silver-plain",
+    name: "Silver Bracelet",
+    size: "Standard",
+    price: 12000,
+    image: "/images/silver-bracelet.jpg",
   },
 ];
 
@@ -102,7 +76,7 @@ export const bracelets = [
    NECKLACES
    ========================= */
 
-export const necklaces = [
+const necklaces = [
   {
     id: "n-female",
     name: "Engraved Female Necklace",
@@ -110,22 +84,22 @@ export const necklaces = [
     image: "/images/Engraved Female Necklace.jpg",
   },
   {
+    id: "n-silver-female",
+    name: "Engraved Silver Female Necklace",
+    price: 12000,
+    image: "/images/Engraved Silver Female Necklace.jpg",
+  },
+  {
     id: "n-sunflower",
-    name: "Engraved Female Sunflower Necklace",
+    name: "Female Sunflower Necklace",
     price: 12000,
     image: "/images/Female Sunflower Necklace.jpg",
   },
   {
-    id: "n-flat",
-    name: "Engraved Flat Necklace",
-    price: 13000,
-    image: "/images/Gold Necklace.jpg",
-  },
-  {
-    id: "n-stoned-barcode",
-    name: "Engraved Stoned Necklace with Barcode",
-    price: 19000,
-    image: "/images/Engraved Stoned Necklace with Barcode.jpg",
+    id: "n-gold",
+    name: "Engraved Gold Necklace",
+    price: 11000,
+    image: "/images/Engraved Gold Necklace.jpg",
   },
   {
     id: "n-gold-stoned",
@@ -134,29 +108,35 @@ export const necklaces = [
     image: "/images/Engraved Gold Stoned Necklace.jpg",
   },
   {
-    id: "n-gold",
-    name: "Engraved Gold Necklace",
-    price: 11000,
-    image: "/images/Engraved Gold Necklace.jpg",
+    id: "n-stoned-barcode",
+    name: "Engraved Stoned Necklace with Barcode",
+    price: 19000,
+    image: "/images/Engraved Stoned Necklace with Barcode.jpg",
+  },
+  {
+    id: "n-picture",
+    name: "Engraved Picture Necklace",
+    price: 21000,
+    image: "/images/Engraved Gold Picture Necklace.jpg",
   },
 ];
 
 /* =========================
-   WRISTWATCHES
+   WATCHES
    ========================= */
 
-export const watches = [
+const watches = [
+  {
+    id: "w-gold-casio",
+    name: "Gold Casio Wristwatch",
+    price: 18000,
+    image: "/images/gold-casio-wristwatch.jpg",
+  },
   {
     id: "w-silver-casio",
     name: "Engraved Silver Casio Wristwatch",
     price: 18000,
     image: "/images/Engraved Silver Casio Wristwatch.jpg",
-  },
-  {
-    id: "w-gold-casio",
-    name: "Engraved Gold Casio Wristwatch",
-    price: 18000,
-    image: "/images/gold-casio-wristwatch.jpg",
   },
   {
     id: "w-black-casio",
@@ -166,7 +146,7 @@ export const watches = [
   },
   {
     id: "w-gold-rolex",
-    name: "Engraved Gold Rolex Wristwatch",
+    name: "Gold Rolex Wristwatch",
     price: 22000,
     image: "/images/Gold Rolex Wristwatch.jpg",
   },
@@ -179,41 +159,33 @@ export const watches = [
 ];
 
 /* =========================
-   SETS & COMBOS
+   SETS / COMBOS
    ========================= */
 
-export const sets = [
+const sets = [
   {
-    id: "s-black",
-    name: "Engraved Black Set",
+    id: "s-black-casio-bracelet",
+    name: "Black Casio Wristwatch + Bracelet",
     price: 32000,
     image: "/images/black-casio-watch-bracelet.jpg",
   },
   {
-    id: "s-gold-wrist",
-    name: "Engraved Gold Wrist Set",
+    id: "s-gold-rolex-bracelet",
+    name: "Gold Rolex Wristwatch + Bracelet",
     price: 32000,
     image: "/images/gold-rolex-watch-bracelet.jpg",
   },
   {
-    id: "s-gold-female",
-    name: "Engraved Gold Female Set",
-    price: 21000,
-    image: "/images/Engraved Gold Picture Necklace.jpg",
+    id: "s-engraved-gold-rolex-bracelet",
+    name: "Engraved Gold Rolex Wristwatch + Bracelet",
+    price: 35000,
+    image: "/images/engraved-gold-rolex-watch-bracelet.jpg",
   },
 ];
 
-/* =========================
-   ✅ REQUIRED EXPORT: byCategory
-   (this fixes your build error)
-   ========================= */
-export const byCategory = (categoryName) => {
-  const key = (categoryName || "").toLowerCase();
-
-  if (key === "bracelets") return bracelets;
-  if (key === "necklaces") return necklaces;
-  if (key === "watches") return watches;
-  if (key === "sets") return sets;
-
-  return [];
+export const byCategory = {
+  bracelets,
+  necklaces,
+  watches,
+  sets,
 };
