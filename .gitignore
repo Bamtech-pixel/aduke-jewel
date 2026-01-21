@@ -56,3 +56,6 @@ ui-debug.log
 !tailwind.config.js
 !postcss.config.js
 !vite.config.js
+.firebase/
+dist/
+
