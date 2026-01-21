@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Routes, Route, Link, useNavigate } from "react-router-dom";
+import { Routes, Route, Link, useNavigate, Navigate } from "react-router-dom";
 
 import Bracelets from "./pages/Bracelets";
 import Necklaces from "./pages/Necklaces";
@@ -33,9 +33,9 @@ export default function App() {
     }
   });
 
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem(THEME_KEY) || "dark"
-  );
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem(THEME_KEY) || "dark";
+  });
 
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
@@ -52,9 +52,7 @@ export default function App() {
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
-  const addToCart = (product) =>
-    setCart((prev) => [...prev, product]);
-
+  const addToCart = (product) => setCart((prev) => [...prev, product]);
   const cartCount = useMemo(() => cart.length, [cart]);
 
   return (
@@ -78,22 +76,27 @@ export default function App() {
         <Route
           path="/checkout"
           element={
-            <Checkout
-              cart={cart}
-              setCart={setCart}
-              currentUser={currentUser}
-            />
+            <Checkout cart={cart} setCart={setCart} currentUser={currentUser} />
           }
         />
 
-        <Route
-          path="/order-success/:orderId"
-          element={<OrderSuccess />}
-        />
+        {/* ✅ Query-based OrderSuccess (matches your current OrderSuccess.jsx) */}
+        <Route path="/order-success" element={<OrderSuccess />} />
 
         <Route path="/login" element={<Auth onLogin={setCurrentUser} />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/admin" element={<Admin />} />
+
+        {/* ✅ Require login for Profile/Admin pages */}
+        <Route
+          path="/profile"
+          element={currentUser ? <Profile /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/admin"
+          element={currentUser ? <Admin /> : <Navigate to="/login" replace />}
+        />
+
+        {/* Fallback */}
+        <Route path="*" element={<Home />} />
       </Routes>
     </Shell>
   );
@@ -105,24 +108,31 @@ export default function App() {
 
 function Shell({ children, cartCount, currentUser, onLogout, theme, setTheme }) {
   const navigate = useNavigate();
-  const toggleTheme = () =>
-    setTheme(theme === "dark" ? "light" : "dark");
+  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   return (
     <div className="min-h-screen bg-white text-gray-900 dark:bg-black dark:text-white">
       <header className="border-b border-black/10 dark:border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
           <Link to="/" className="font-semibold text-lg">
             Aduke<span className="text-gray-500">_Jewels</span>
           </Link>
 
-          <nav className="flex items-center gap-6 text-sm">
-            <Link to="/bracelets">Bracelets</Link>
-            <Link to="/necklaces">Necklaces</Link>
-            <Link to="/watches">Watches</Link>
-            <Link to="/sets">Sets</Link>
+          <nav className="flex items-center gap-4 sm:gap-6 text-sm">
+            <Link to="/bracelets" className="hidden sm:inline">
+              Bracelets
+            </Link>
+            <Link to="/necklaces" className="hidden sm:inline">
+              Necklaces
+            </Link>
+            <Link to="/watches" className="hidden sm:inline">
+              Watches
+            </Link>
+            <Link to="/sets" className="hidden sm:inline">
+              Sets
+            </Link>
 
-            <Link to="/cart">
+            <Link to="/cart" className="px-3 py-1 border rounded">
               Cart ({cartCount})
             </Link>
 
@@ -135,15 +145,24 @@ function Shell({ children, cartCount, currentUser, onLogout, theme, setTheme }) 
             </button>
 
             {currentUser ? (
-              <button
-                onClick={() => {
-                  onLogout();
-                  navigate("/");
-                }}
-                className="px-3 py-1 border rounded"
-              >
-                Logout
-              </button>
+              <>
+                <Link to="/profile" className="px-3 py-1 border rounded">
+                  Profile
+                </Link>
+                <Link to="/admin" className="px-3 py-1 border rounded">
+                  Admin
+                </Link>
+                <button
+                  onClick={() => {
+                    onLogout();
+                    navigate("/");
+                  }}
+                  className="px-3 py-1 border rounded"
+                  type="button"
+                >
+                  Logout
+                </button>
+              </>
             ) : (
               <Link to="/login" className="px-3 py-1 border rounded">
                 Login
@@ -151,11 +170,41 @@ function Shell({ children, cartCount, currentUser, onLogout, theme, setTheme }) 
             )}
           </nav>
         </div>
+
+        {/* Mobile quick links */}
+        <div className="sm:hidden border-t border-black/10 dark:border-white/10">
+          <div className="max-w-7xl mx-auto px-4 py-3 flex gap-3 overflow-x-auto text-sm">
+            <Link
+              to="/bracelets"
+              className="px-3 py-1 border rounded whitespace-nowrap"
+            >
+              Bracelets
+            </Link>
+            <Link
+              to="/necklaces"
+              className="px-3 py-1 border rounded whitespace-nowrap"
+            >
+              Necklaces
+            </Link>
+            <Link
+              to="/watches"
+              className="px-3 py-1 border rounded whitespace-nowrap"
+            >
+              Watches
+            </Link>
+            <Link
+              to="/sets"
+              className="px-3 py-1 border rounded whitespace-nowrap"
+            >
+              Sets
+            </Link>
+          </div>
+        </div>
       </header>
 
       <main>{children}</main>
 
-      <footer className="border-t border-black/10 dark:border-white/10 py-8 mt-16 text-center text-sm text-gray-500">
+      <footer className="border-t border-black/10 dark:border-white/10 py-8 mt-16 text-center text-sm text-gray-500 dark:text-gray-400">
         © {new Date().getFullYear()} Aduke_Jewels · WhatsApp 09019027395
       </footer>
     </div>
@@ -169,34 +218,49 @@ function Shell({ children, cartCount, currentUser, onLogout, theme, setTheme }) 
 function Home() {
   return (
     <section className="relative overflow-hidden">
-      {/* Luxury background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black via-black to-[#0a0a0a]" />
+      {/* Dark base + champagne glow + subtle pattern */}
+      <div className="absolute inset-0 bg-[#0b0b0c]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#d6b37c]/25 via-transparent to-transparent" />
+      <div className="absolute inset-0 opacity-[0.10] [background-image:radial-gradient(#d6b37c_1px,transparent_1px)] [background-size:18px_18px]" />
 
-      {/* Champagne glow */}
-      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full bg-[#d6b37c]/20 blur-[120px]" />
+      {/* Optional hero image (only if it exists) */}
+      <div
+        className="absolute inset-0 opacity-20 bg-center bg-cover"
+        style={{ backgroundImage: "url('/images/hero.jpg')" }}
+      />
 
-      <div className="relative max-w-6xl mx-auto px-6 py-24 text-center">
-        <p className="inline-block text-xs px-4 py-2 rounded-full border border-[#d6b37c]/40 text-[#f2e3c6] bg-[#d6b37c]/10 mb-6">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center">
+        <p className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-full border border-[#d6b37c]/50 text-[#f2e3c6] bg-[#d6b37c]/10">
           ✦ Personalized engraving available
         </p>
 
-        <h2 className="text-4xl md:text-5xl font-semibold mb-6 text-white">
+        <h2 className="mt-6 text-3xl sm:text-5xl font-semibold leading-tight text-white">
           Jewelry For Every Journey
         </h2>
 
-        <p className="text-gray-300 max-w-2xl mx-auto mb-10">
-          Personalized bracelets, necklaces, watches, and engraved pieces
-          crafted to hold memories, meaning, and elegance.
+        <p className="mt-5 text-gray-200/80 max-w-2xl mx-auto text-sm sm:text-base">
+          Personalized bracelets, necklaces, watches, and engraved pieces crafted
+          to hold memories, meaning, and elegance.
         </p>
 
-        <Link
-          to="/bracelets"
-          className="inline-block px-10 py-3 rounded-xl bg-white text-black font-semibold hover:bg-[#d6b37c] transition"
-        >
-          Shop Now
-        </Link>
+        {/* BOTH buttons */}
+        <div className="mt-8 flex flex-col sm:flex-row justify-center gap-3">
+          <Link
+            to="/bracelets"
+            className="px-10 py-3 rounded-xl bg-white text-black hover:bg-[#d6b37c] transition font-semibold"
+          >
+            Shop Now
+          </Link>
 
-        <div className="mt-12 flex justify-center">
+          <Link
+            to="/cart"
+            className="px-10 py-3 rounded-xl border border-[#d6b37c] text-[#f2e3c6] hover:bg-[#d6b37c] hover:text-black transition font-semibold"
+          >
+            View Cart
+          </Link>
+        </div>
+
+        <div className="mt-10 flex justify-center">
           <div className="h-[2px] w-20 bg-[#d6b37c]" />
         </div>
       </div>

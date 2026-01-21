@@ -1,5 +1,6 @@
+// src/pages/Auth.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -8,6 +9,12 @@ import { auth } from "../firebase";
 
 export default function Auth({ onLogin }) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // ✅ Return user to the page they wanted before login
+  const from =
+    (location.state && typeof location.state.from === "string" && location.state.from) ||
+    "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,9 +48,10 @@ export default function Auth({ onLogin }) {
         email: userCred.user.email,
       });
 
-      navigate("/");
+      // ✅ Go back to the page user came from (checkout/profile/admin/etc.)
+      navigate(from, { replace: true });
     } catch (err) {
-      setError(err.message || "Authentication failed");
+      setError(err?.message || "Authentication failed");
     } finally {
       setLoading(false);
     }
@@ -69,7 +77,6 @@ export default function Auth({ onLogin }) {
         )}
 
         <form onSubmit={submit} className="space-y-4">
-          {/* EMAIL */}
           <input
             type="email"
             required
@@ -81,7 +88,6 @@ export default function Auth({ onLogin }) {
                        dark:bg-white dark:text-black dark:placeholder:text-gray-500"
           />
 
-          {/* PASSWORD (FIXED VISIBILITY) */}
           <input
             type="password"
             required
@@ -114,6 +120,7 @@ export default function Auth({ onLogin }) {
               <button
                 onClick={() => setMode("signup")}
                 className="font-medium text-black dark:text-white underline"
+                type="button"
               >
                 Sign up
               </button>
@@ -124,6 +131,7 @@ export default function Auth({ onLogin }) {
               <button
                 onClick={() => setMode("login")}
                 className="font-medium text-black dark:text-white underline"
+                type="button"
               >
                 Login
               </button>

@@ -39,11 +39,13 @@ export default function Admin() {
   const [qText, setQText] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  // Auth guard
+  // ✅ Auth guard (remember where user wanted)
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u || null);
-      if (!u) navigate("/login");
+      if (!u) {
+        navigate("/login", { state: { from: "/admin" } });
+      }
     });
     return () => unsub();
   }, [navigate]);
